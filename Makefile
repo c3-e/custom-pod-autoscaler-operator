@@ -1,6 +1,6 @@
-REGISTRY = custompodautoscaler
+REGISTRY = ci-registry.c3iot.io/custompodautoscaler
 NAME = operator
-VERSION = latest
+VERSION = 1.4.2-2
 
 default: vendor_modules generate
 	@echo "=============Building============="

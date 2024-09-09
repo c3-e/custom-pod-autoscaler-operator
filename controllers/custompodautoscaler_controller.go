@@ -229,12 +229,27 @@ func (r *CustomPodAutoscalerReconciler) Reconcile(context context.Context, req c
 	}
 
 	// Define a new Service Account object
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.Namespace,
-			Labels:    labels,
-		},
+	var serviceAccount *corev1.ServiceAccount
+	if !(*instance.Spec.ProvisionServiceAccount) {
+		if instance.Spec.Template.Spec.ServiceAccountName != "" {
+			serviceAccount = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      instance.Spec.Template.Spec.ServiceAccountName,
+					Namespace: instance.Namespace,
+					Labels:    labels,
+				},
+			}
+		} else {
+			return ctrl.Result{}, errors.NewBadRequest("ServiceAccount not provided in the CustomPodAutoscaler spec")
+		}
+	} else {
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      instance.Name,
+				Namespace: instance.Namespace,
+				Labels:    labels,
+			},
+		}
 	}
 
 	result, err := r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, serviceAccount, *instance.Spec.ProvisionServiceAccount, true, "v1/ServiceAccount")

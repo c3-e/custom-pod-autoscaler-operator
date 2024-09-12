@@ -252,75 +252,77 @@ func (r *CustomPodAutoscalerReconciler) Reconcile(context context.Context, req c
 		}
 	}
 
-	result, err := r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, serviceAccount, *instance.Spec.ProvisionServiceAccount, true, "v1/ServiceAccount")
-	if err != nil {
-		return result, err
-	}
+	if *instance.Spec.ProvisionServiceAccount {
+		result, err := r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, serviceAccount, *instance.Spec.ProvisionServiceAccount, true, "v1/ServiceAccount")
+		if err != nil {
+			return result, err
+		}
 
-	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.Namespace,
-			Labels:    labels,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "replicationcontrollers", "replicationcontrollers/scale"},
-				Verbs:     []string{"*"},
-			},
-			{
-				APIGroups: []string{"apps"},
-				Resources: []string{"deployments", "deployments/scale", "replicasets", "replicasets/scale", "statefulsets", "statefulsets/scale"},
-				Verbs:     []string{"*"},
-			},
-		},
-	}
-
-	if *instance.Spec.RoleRequiresMetricsServer {
-		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups: []string{"metrics.k8s.io", "custom.metrics.k8s.io", "external.metrics.k8s.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		})
-	}
-
-	if *instance.Spec.RoleRequiresArgoRollouts {
-		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups: []string{"argoproj.io"},
-			Resources: []string{"rollouts", "rollouts/scale"},
-			Verbs:     []string{"*"},
-		})
-	}
-
-	result, err = r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, role, *instance.Spec.ProvisionRole, true, "v1/Role")
-	if err != nil {
-		return result, err
-	}
-
-	// Define a new Role Binding object
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.Namespace,
-			Labels:    labels,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
+		role := &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      instance.Name,
 				Namespace: instance.Namespace,
+				Labels:    labels,
 			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "Role",
-			Name:     instance.Name,
-			APIGroup: "rbac.authorization.k8s.io",
-		},
-	}
-	result, err = r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, roleBinding, *instance.Spec.ProvisionRoleBinding, true, "v1/RoleBinding")
-	if err != nil {
-		return result, err
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods", "replicationcontrollers", "replicationcontrollers/scale"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments", "deployments/scale", "replicasets", "replicasets/scale", "statefulsets", "statefulsets/scale"},
+					Verbs:     []string{"*"},
+				},
+			},
+		}
+
+		if *instance.Spec.RoleRequiresMetricsServer {
+			role.Rules = append(role.Rules, rbacv1.PolicyRule{
+				APIGroups: []string{"metrics.k8s.io", "custom.metrics.k8s.io", "external.metrics.k8s.io"},
+				Resources: []string{"*"},
+				Verbs:     []string{"*"},
+			})
+		}
+
+		if *instance.Spec.RoleRequiresArgoRollouts {
+			role.Rules = append(role.Rules, rbacv1.PolicyRule{
+				APIGroups: []string{"argoproj.io"},
+				Resources: []string{"rollouts", "rollouts/scale"},
+				Verbs:     []string{"*"},
+			})
+		}
+
+		result, err = r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, role, *instance.Spec.ProvisionRole, true, "v1/Role")
+		if err != nil {
+			return result, err
+		}
+
+		// Define a new Role Binding object
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      instance.Name,
+				Namespace: instance.Namespace,
+				Labels:    labels,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      instance.Name,
+					Namespace: instance.Namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				Kind:     "Role",
+				Name:     instance.Name,
+				APIGroup: "rbac.authorization.k8s.io",
+			},
+		}
+		result, err = r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, roleBinding, *instance.Spec.ProvisionRoleBinding, true, "v1/RoleBinding")
+		if err != nil {
+			return result, err
+		}
 	}
 
 	// Set up Pod labels, if labels are provided in the template Pod Spec the labels are merged
@@ -373,7 +375,7 @@ func (r *CustomPodAutoscalerReconciler) Reconcile(context context.Context, req c
 		ObjectMeta: metav1.ObjectMeta(objectMeta),
 		Spec:       corev1.PodSpec(podSpec),
 	}
-	result, err = r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, pod, *instance.Spec.ProvisionPod, false, "v1/Pod")
+	result, err := r.KubernetesResourceReconciler.Reconcile(reqLogger, instance, pod, *instance.Spec.ProvisionPod, false, "v1/Pod")
 	if err != nil {
 		return result, err
 	}

@@ -1,6 +1,6 @@
-REGISTRY = ci-registry.c3iot.io/custompodautoscaler
+REGISTRY = ci-registry.c3.ai/cpa
 NAME = operator
-VERSION = 1.4.2-2
+VERSION = 1.4.2-3
 
 default: vendor_modules generate
 	@echo "=============Building============="
